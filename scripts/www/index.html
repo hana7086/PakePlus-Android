@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>网咖外设清点工具</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='6' width='28' height='18' rx='3' fill='%232dd4bf'/%3E%3Crect x='6' y='10' width='5' height='5' rx='1' fill='%230c1220'/%3E%3Crect x='13' y='10' width='5' height='5' rx='1' fill='%230c1220'/%3E%3Crect x='20' y='10' width='5' height='5' rx='1' fill='%230c1220'/%3E%3Crect x='9' y='18' width='14' height='4' rx='2' fill='%230c1220'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0c1220;
+  --bg-2:#0f1626;
+  --panel:#151e30;
+  --panel-2:#1a2438;
+  --panel-3:#202c44;
+  --border:#26344d;
+  --border-2:#31405e;
+  --text:#e7edf8;
+  --muted:#93a3bd;
+  --accent:#2dd4bf;
+  --accent-dim:#1fbfae;
+  --accent-soft:rgba(45,212,191,.12);
+  --warn:#fb7185;
+  --warn-soft:rgba(251,113,133,.13);
+  --ok:#4ade80;
+  --ok-soft:rgba(74,222,128,.12);
+  --amber:#fbbf24;
+  --amber-soft:rgba(251,191,36,.13);
+  --radius:14px;
+  --radius-s:9px;
+  --shadow:0 8px 28px rgba(0,0,0,.35);
+  --mono:"SF Mono","JetBrains Mono","Consolas",monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
+  background:
+    radial-gradient(1100px 480px at 85% -8%, rgba(45,212,191,.10), transparent 60%),
+    radial-gradient(900px 420px at -10% 0%, rgba(56,189,248,.07), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  line-height:1.5;
+  font-size:15px;
+}
+a,button{color:inherit;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;}
+input,select,textarea{font-family:inherit;color:inherit;}
+.wrap{max-width:1200px;margin:0 auto;padding:20px clamp(14px,3vw,28px) 60px;}
+
+/* ===== 顶栏 ===== */
+header.app-head{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:14px;flex-wrap:wrap;margin-bottom:18px;
+}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand .mark{
+  width:44px;height:44px;border-radius:12px;flex:none;
+  display:grid;place-items:center;
+  background:linear-gradient(150deg,#20b89f,#0e7e8c);
+  box-shadow:0 0 0 1px rgba(45,212,191,.35), 0 6px 18px rgba(45,212,191,.25);
+}
+.brand h1{font-size:clamp(18px,2.6vw,23px);font-weight:800;letter-spacing:.2px;line-height:1.2;}
+.brand .sub{font-size:12.5px;color:var(--muted);}
+.head-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+
+/* ===== 统计条 ===== */
+.stats{
+  display:grid;gap:12px;
+  grid-template-columns:repeat(4,1fr);
+  margin-bottom:16px;
+}
+.stat{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px 16px;
+  position:relative;overflow:hidden;
+}
+.stat .lbl{font-size:12.5px;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.stat .num{font-size:clamp(24px,3.4vw,32px);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.3px;}
+.stat .num small{font-size:14px;font-weight:600;color:var(--muted);margin-left:3px;}
+.stat.total .num{color:var(--text);}
+.stat.done .num{color:var(--ok);}
+.stat.pending .num{color:var(--amber);}
+.stat.overdue .num{color:var(--warn);}
+.stat::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;}
+.stat.done::after{background:var(--ok);}
+.stat.pending::after{background:var(--amber);}
+.stat.overdue::after{background:var(--warn);}
+.stat .note{font-size:11.5px;color:var(--muted);margin-top:2px;}
+
+/* ===== 工具条 ===== */
+.toolbar{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  margin-bottom:16px;
+}
+.view-tabs{display:flex;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-s);padding:3px;gap:3px;}
+.view-tab{
+  padding:8px 16px;border-radius:7px;font-size:13.5px;font-weight:600;
+  color:var(--muted);display:flex;align-items:center;gap:7px;transition:.15s;
+}
+.view-tab .cnt{
+  font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;
+  background:var(--panel-3);color:var(--text);
+}
+.view-tab.active{background:var(--accent);color:#052a24;}
+.view-tab.active .cnt{background:rgba(5,42,36,.25);color:#052a24;}
+.search{
+  flex:1;min-width:180px;display:flex;align-items:center;gap:8px;
+  background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-s);
+  padding:0 12px;height:40px;transition:.15s;
+}
+.search:focus-within{border-color:var(--accent);}
+.search svg{flex:none;color:var(--muted);}
+.search input{flex:1;background:none;border:none;outline:none;font-size:14px;height:100%;}
+.search input::placeholder{color:#64748e;}
+.cat-select{
+  background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-s);
+  padding:0 10px;height:40px;font-size:13.5px;color:var(--text);outline:none;
+}
+.btn{
+  display:inline-flex;align-items:center;gap:7px;justify-content:center;
+  height:40px;padding:0 16px;border-radius:var(--radius-s);
+  font-size:13.5px;font-weight:600;transition:.15s;white-space:nowrap;
+}
+.btn svg{flex:none;}
+.btn.primary{background:var(--accent);color:#052a24;}
+.btn.primary:hover{background:var(--accent-dim);}
+.btn.ghost{background:var(--panel);border:1px solid var(--border-2);color:var(--text);}
+.btn.ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn.danger{background:var(--warn-soft);color:var(--warn);border:1px solid rgba(251,113,133,.3);}
+.btn.danger:hover{background:rgba(251,113,133,.22);}
+.btn.sm{height:38px;padding:0 13px;font-size:12.5px;border-radius:8px;}
+
+/* ===== 卡片网格 ===== */
+.grid{
+  display:grid;gap:14px;
+  grid-template-columns:repeat(auto-fill,minmax(255px,1fr));
+}
+.card{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+  display:flex;flex-direction:column;transition:border-color .15s, transform .12s;
+}
+.card:hover{border-color:var(--border-2);}
+.card.overdue{border-color:rgba(251,113,133,.55);}
+.card.overdue .overdue-ribbon{
+  background:var(--warn-soft);color:var(--warn);
+  font-size:12px;font-weight:700;padding:7px 12px;
+  display:flex;align-items:center;gap:8px;
+}
+.card-cover{
+  height:150px;position:relative;background:var(--bg-2);
+  display:grid;place-items:center;overflow:hidden;flex:none;
+}
+.card-cover img{width:100%;height:100%;object-fit:cover;display:block;}
+.card-cover .ph{display:flex;flex-direction:column;align-items:center;gap:6px;color:#5b6b85;}
+.card-cover .ph svg{opacity:.8;}
+.card-cover .ph span{font-size:12px;font-weight:600;}
+.card-cover .cat-tag{
+  position:absolute;left:10px;top:10px;padding:3px 9px;border-radius:999px;
+  font-size:11px;font-weight:700;background:rgba(12,18,32,.82);color:var(--accent);
+  border:1px solid rgba(45,212,191,.4);backdrop-filter:blur(3px);
+}
+.card-body{padding:13px 14px;display:flex;flex-direction:column;gap:8px;flex:1;}
+.card-title{display:flex;align-items:baseline;gap:8px;}
+.card-title .nm{font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.card-title .code{font-family:var(--mono);font-size:11.5px;color:var(--muted);flex:none;}
+.card-note{
+  font-size:12.5px;color:var(--muted);background:var(--bg-2);
+  border:1px dashed var(--border);border-radius:8px;padding:7px 9px;line-height:1.45;
+  word-break:break-word;
+}
+.card-meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;}
+.chip.done{background:var(--ok-soft);color:var(--ok);}
+.chip.pending{background:var(--amber-soft);color:var(--amber);}
+.card-actions{display:flex;gap:8px;margin-top:auto;padding-top:4px;}
+.card-actions .spacer{flex:1;}
+.icon-btn{
+  width:38px;height:38px;border-radius:8px;display:grid;place-items:center;
+  color:var(--muted);background:var(--panel-2);border:1px solid var(--border);transition:.15s;
+}
+.icon-btn:hover{color:var(--accent);border-color:var(--accent);}
+.icon-btn.del:hover{color:var(--warn);border-color:var(--warn);}
+.icon-btn svg{flex:none;}
+
+/* ===== 空态 ===== */
+.empty{
+  grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted);
+  background:var(--panel);border:1px dashed var(--border-2);border-radius:var(--radius);
+}
+.empty svg{opacity:.5;margin-bottom:12px;}
+.empty .t{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.empty .s{font-size:13px;}
+.empty .btn{margin-top:16px;}
+
+/* ===== 弹窗 ===== */
+.overlay{
+  position:fixed;inset:0;background:rgba(4,8,16,.66);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;padding:16px;z-index:50;
+}
+.overlay.show{display:flex;}
+.modal{
+  width:min(520px,100%);max-height:90vh;overflow:auto;
+  background:var(--panel-2);border:1px solid var(--border-2);border-radius:16px;
+  box-shadow:var(--shadow);animation:pop .18s ease;
+}
+@keyframes pop{from{transform:translateY(10px);opacity:0;}to{transform:none;opacity:1;}}
+.modal-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:var(--panel-2);z-index:2;
+}
+.modal-head h3{font-size:16px;font-weight:800;}
+.modal-x{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--muted);background:var(--panel-3);}
+.modal-x:hover{color:var(--warn);}
+.modal-body{padding:20px;}
+.fld{margin-bottom:15px;}
+.fld label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;}
+.fld input[type=text],.fld input[type=number],.fld select,.fld textarea{
+  width:100%;background:var(--bg-2);border:1px solid var(--border);
+  border-radius:9px;padding:10px 12px;font-size:14px;outline:none;transition:.15s;
+}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--accent);}
+.fld textarea{resize:vertical;min-height:70px;}
+.fld-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.img-upload{
+  display:flex;gap:12px;align-items:center;
+  background:var(--bg-2);border:1px dashed var(--border-2);border-radius:9px;padding:12px;
+}
+.img-upload .prev{
+  width:64px;height:64px;border-radius:8px;overflow:hidden;flex:none;
+  background:var(--panel-3);display:grid;place-items:center;position:relative;
+}
+.img-upload .prev img{width:100%;height:100%;object-fit:cover;}
+.img-upload .prev .rm{
+  position:absolute;inset:auto;top:0;right:0;width:20px;height:20px;
+  display:grid;place-items:center;background:rgba(0,0,0,.6);color:#fff;border-radius:0 0 0 8px;
+}
+.img-upload .hint{font-size:12.5px;color:var(--muted);line-height:1.5;}
+.img-upload .hint b{color:var(--text);font-weight:600;}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 20px;border-top:1px solid var(--border);}
+
+/* ===== 设置面板（抽屉） ===== */
+.setting-item{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:14px 0;border-bottom:1px solid var(--border);
+}
+.setting-item:last-child{border-bottom:none;}
+.setting-item .lbl{font-weight:600;font-size:14px;}
+.setting-item .desc{font-size:12.5px;color:var(--muted);margin-top:2px;}
+.num-inline{display:flex;align-items:center;gap:8px;}
+.num-inline input{
+  width:86px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;
+  padding:7px 10px;font-size:14px;outline:none;
+}
+.num-inline input:focus{border-color:var(--accent);}
+.num-inline .unit{color:var(--muted);font-size:13px;}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* ===== 分类管理 ===== */
+.cat-manage{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+.cat-row{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg-2);border:1px solid var(--border);border-radius:9px;
+  padding:5px 6px 5px 11px;
+}
+.cat-row .c-icon{flex:none;color:var(--accent);}
+.cat-row input{
+  flex:1;min-width:0;background:none;border:none;outline:none;
+  font-size:14px;padding:6px 0;color:var(--text);
+}
+.cat-row input:disabled{color:var(--muted);cursor:not-allowed;}
+.cat-row .count{font-size:11.5px;color:var(--muted);white-space:nowrap;}
+.cat-add-row{display:flex;gap:8px;margin-top:4px;}
+.cat-add-row input{
+  flex:1;background:var(--bg-2);border:1px solid var(--border);border-radius:9px;
+  padding:9px 12px;font-size:14px;outline:none;min-width:0;
+}
+.cat-add-row input:focus{border-color:var(--accent);}
+.icon-btn.mini{width:30px;height:30px;flex:none;}
+.icon-btn.mini.lock{color:#5b6b85;cursor:not-allowed;opacity:.55;}
+
+/* ===== 清点日志 ===== */
+.modal-lg{width:min(760px,100%);}
+.log-toolbar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+.log-tabs{display:flex;background:var(--bg-2);border:1px solid var(--border);border-radius:9px;padding:3px;gap:3px;}
+.log-tab{padding:8px 16px;border-radius:7px;font-size:13.5px;font-weight:600;color:var(--muted);transition:.15s;}
+.log-tab.active{background:var(--accent);color:#052a24;}
+.log-date{display:flex;align-items:center;gap:8px;margin-left:auto;}
+.log-date label{font-size:12.5px;color:var(--muted);}
+.log-date input{
+  background:var(--bg-2);border:1px solid var(--border);border-radius:9px;
+  padding:8px 10px;font-size:13.5px;color:var(--text);outline:none;
+  color-scheme:dark;
+}
+.log-date input:focus{border-color:var(--accent);}
+.log-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.log-stat{background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;}
+.log-stat .n{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;}
+.log-stat .l{font-size:12px;color:var(--muted);margin-top:1px;}
+.log-stat.green .n{color:var(--ok);}
+.log-stat.amber .n{color:var(--amber);}
+.log-stat.blue .n{color:var(--accent);}
+.log-list{display:flex;flex-direction:column;gap:8px;max-height:54vh;overflow:auto;padding-right:2px;}
+.log-group-h{
+  font-size:12.5px;color:var(--muted);font-weight:600;
+  margin:12px 0 6px;display:flex;align-items:center;gap:10px;
+}
+.log-group-h:first-child{margin-top:0;}
+.log-group-h::after{content:"";flex:1;height:1px;background:var(--border);}
+.log-item{
+  display:flex;align-items:center;gap:10px;
+  background:var(--bg-2);border:1px solid var(--border);border-radius:9px;padding:9px 12px;
+}
+.log-item .t{font-family:var(--mono);font-size:12px;color:var(--muted);flex:none;width:106px;}
+.log-item .nm{flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.log-item .code{font-family:var(--mono);font-size:11px;color:var(--muted);flex:none;}
+.log-item .cat{flex:none;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600;}
+.log-empty{text-align:center;color:var(--muted);padding:40px 0;font-size:13.5px;}
+
+/* ===== 提示 ===== */
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(16px);
+  background:var(--panel-3);color:var(--text);border:1px solid var(--border-2);
+  padding:10px 18px;border-radius:999px;font-size:13.5px;font-weight:600;
+  box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.22s;z-index:99;
+  display:flex;align-items:center;gap:8px;max-width:90vw;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;}
+.toast.warn .dot{background:var(--warn);}
+
+/* ===== 页脚 ===== */
+footer{margin-top:30px;color:#5b6b85;font-size:12px;text-align:center;}
+
+@media (max-width:860px){
+  .stats{grid-template-columns:repeat(2,1fr);}
+}
+@media (max-width:560px){
+  .stats{grid-template-columns:1fr 1fr;}
+  .toolbar{gap:9px;}
+  .view-tab{padding:9px 12px;font-size:13px;min-height:42px;}
+  .search{min-width:100%;order:3;}
+  .grid{grid-template-columns:1fr;}
+  .card-cover{height:170px;}
+  .head-actions .btn{padding:0 13px;min-height:42px;}
+  .fld-row{grid-template-columns:1fr;}
+  .btn.sm{height:40px;}
+  input[type=text],input[type=number],select,textarea{font-size:16px;}
+  .log-stats{grid-template-columns:1fr;}
+  .log-item{flex-wrap:wrap;}
+  .log-item .t{width:auto;}
+  .log-date{margin-left:0;width:100%;}
+  .log-date input{flex:1;min-width:0;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== 顶栏 ===== -->
+  <header class="app-head">
+    <div class="brand">
+      <div class="mark">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#052a24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/><path d="M2 20h20" stroke-width="1.5"/></svg>
+      </div>
+      <div>
+        <h1>网咖外设清点</h1>
+        <div class="sub">键盘 · 鼠标 · 耳机 · 手柄 · 其他</div>
+      </div>
+    </div>
+    <div class="head-actions">
+      <button class="btn ghost" id="btnSettings" title="设置">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        设置
+      </button>
+      <button class="btn ghost" id="btnLogs" title="查看清点日志">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+        清点日志
+      </button>
+      <button class="btn ghost" id="btnExport" title="导出备份">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        导出
+      </button>
+      <button class="btn primary" id="btnAdd">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        添加外设
+      </button>
+    </div>
+  </header>
+
+  <!-- ===== 统计条 ===== -->
+  <section class="stats" id="stats">
+    <div class="stat total"><div class="lbl">外设总数</div><div class="num" id="stTotal">0</div></div>
+    <div class="stat done"><div class="lbl">已清点</div><div class="num" id="stDone">0</div></div>
+    <div class="stat pending"><div class="lbl">未清点</div><div class="num" id="stPending">0</div></div>
+    <div class="stat overdue"><div class="lbl">预警</div><div class="num" id="stOverdue">0</div><div class="note" id="stOverdueNote"></div></div>
+  </section>
+
+  <!-- ===== 工具条 ===== -->
+  <section class="toolbar">
+    <div class="view-tabs" id="viewTabs">
+      <button class="view-tab active" data-view="pending"><span>未清点</span><span class="cnt" id="cntPending">0</span></button>
+      <button class="view-tab" data-view="done"><span>已清点</span><span class="cnt" id="cntDone">0</span></button>
+      <button class="view-tab" data-view="all"><span>全部</span><span class="cnt" id="cntAll">0</span></button>
+    </div>
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" id="searchInput" placeholder="搜索名称 / 编号…">
+    </div>
+    <select class="cat-select" id="catFilter"><option value="">全部分类</option></select>
+    <button class="btn ghost" id="btnCheckAll" title="将当前未清点外设全部标记为已清点">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+      一键全部清点
+    </button>
+    <button class="btn ghost" id="btnReset" title="将所有外设重置为未清点，开始新一轮清点">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      重新清点
+    </button>
+  </section>
+
+  <!-- ===== 卡片网格 ===== -->
+  <section class="grid" id="grid"></section>
+
+  <footer>数据保存在当前浏览器本地 · 建议定期「导出」备份</footer>
+</div>
+
+<!-- ===== 外设编辑弹窗 ===== -->
+<div class="overlay" id="overlayEditor">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="editorTitle">添加外设</h3>
+      <button class="modal-x" data-close aria-label="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="fld">
+        <label>外设图片</label>
+        <div class="img-upload">
+          <div class="prev" id="prevBox">
+            <svg id="prevDefault" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5b6b85" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15h10"/></svg>
+            <img id="prevImg" alt="" style="display:none">
+            <span class="rm" id="prevRm" style="display:none">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </span>
+          </div>
+          <div class="hint">
+            <b>点击上传本地图片</b><br>支持 JPG / PNG，自动压缩；不上传则使用分类默认图标。
+            <div style="margin-top:8px">
+              <button class="btn ghost sm" id="btnPickImg">选择图片</button>
+              <input type="file" id="imgInput" accept="image/*" hidden>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="fld-row">
+        <div class="fld">
+          <label>名称 *</label>
+          <input type="text" id="fName" placeholder="如：A区3号机键盘">
+        </div>
+        <div class="fld">
+          <label>编号 *</label>
+          <input type="text" id="fCode" placeholder="如：KB-003">
+        </div>
+      </div>
+      <div class="fld">
+        <label>分类</label>
+        <select id="fCat"></select>
+      </div>
+      <div class="fld">
+        <label>备注</label>
+        <textarea id="fNote" placeholder="如：2号键连击需更换 / 音量滚轮松动…"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" data-close>取消</button>
+      <button class="btn primary" id="btnSaveEditor">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        保存
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 设置弹窗 ===== -->
+<div class="overlay" id="overlaySettings">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>设置</h3>
+      <button class="modal-x" data-close aria-label="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="setting-item" style="flex-direction:column;align-items:stretch;gap:6px">
+        <div>
+          <div class="lbl">分类管理</div>
+          <div class="desc">自定义分类，可添加 / 重命名 / 删除。删除分类后，其下外设自动归入「其他」。</div>
+        </div>
+        <div class="cat-manage" id="catManage"></div>
+        <div class="cat-add-row">
+          <input type="text" id="newCatName" placeholder="新分类名称，如：显示器、主机…" maxlength="12">
+          <button class="btn primary sm" id="btnAddCat" style="flex:none">添加分类</button>
+        </div>
+      </div>
+      <div class="setting-item">
+        <div>
+          <div class="lbl">预警天数</div>
+          <div class="desc">距上次清点超过该天数未清点，自动标为「预警」提醒</div>
+        </div>
+        <div class="num-inline">
+          <input type="number" id="setWarnDays" min="1" max="90" value="7">
+          <span class="unit">天</span>
+        </div>
+      </div>
+      <div class="setting-item">
+        <div>
+          <div class="lbl">数据备份</div>
+          <div class="desc">导入或导出外设清单 JSON 文件，用于换设备 / 存档</div>
+        </div>
+        <div class="row-actions">
+          <button class="btn ghost sm" id="btnExport2">导出</button>
+          <button class="btn ghost sm" id="btnImport">导入</button>
+          <input type="file" id="importInput" accept=".json,application/json" hidden>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" data-close>完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 清点日志弹窗 ===== -->
+<div class="overlay" id="overlayLogs">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <h3>清点日志</h3>
+      <button class="modal-x" data-close aria-label="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="log-toolbar">
+        <div class="log-tabs" id="logTabs">
+          <button class="log-tab active" data-mode="today">今日</button>
+          <button class="log-tab" data-mode="yesterday">昨日</button>
+          <button class="log-tab" data-mode="all">全部</button>
+        </div>
+        <div class="log-date">
+          <label for="logDateInput">指定日期</label>
+          <input type="date" id="logDateInput">
+        </div>
+      </div>
+      <div class="log-stats" id="logStats"></div>
+      <div class="log-list" id="logList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 确认删除弹窗 ===== -->
+<div class="overlay" id="overlayConfirm">
+  <div class="modal" style="width:min(400px,100%)">
+    <div class="modal-body" style="padding-top:24px">
+      <div style="text-align:center;margin-bottom:16px">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+      </div>
+      <h3 style="text-align:center;font-size:16px;margin-bottom:6px" id="confirmTitle">删除这条外设？</h3>
+      <p style="text-align:center;color:var(--muted);font-size:13px" id="confirmDesc">删除后不可恢复，清点记录也会一并移除。</p>
+    </div>
+    <div class="modal-foot" style="justify-content:center">
+      <button class="btn ghost" data-close>取消</button>
+      <button class="btn danger" id="btnConfirmDel">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
+
+<!-- APP JS -->
+<script>
+/* ===== 状态 ===== */
+const DEFAULT_CATS = ["键盘","鼠标","耳机","手柄","其他"];
+const CAT_ICONS = {
+  "键盘":'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M10 13h.01M14 13h.01M7 17h10"/>',
+  "鼠标":'<rect x="7" y="2" width="10" height="16" rx="5"/><path d="M12 2v6M9 10h.01"/>',
+  "耳机":'<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>',
+  "手柄":'<path d="M6 12h4M8 10v4"/><path d="M15 11h.01M18 13h.01"/><path d="M17.32 5H6.68a4 4 0 0 0-3.95 3.25L1.6 14.5A2.5 2.5 0 0 0 6.5 16.5l2.1-3h6.8l2.1 3a2.5 2.5 0 0 0 4.9-2l-1.13-6.25A4 4 0 0 0 17.32 5z"/>',
+  "其他":'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/>'
+};
+const GENERIC_ICON = CAT_ICONS["其他"];
+const DAY = 86400000;
+
+let state = {
+  devices: [],
+  settings: { warnDays: 7 },
+  cats: [...DEFAULT_CATS],
+  logs: [],
+  logMode: "today",
+  logDate: "",
+  view: "pending",
+  cat: "",
+  search: "",
+  editingId: null,
+  imgData: "",
+  confirm: null
+};
+
+/* ===== 存储 ===== */
+const LS_KEY = "netbar_inventory_v1";
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(Array.isArray(d.devices)) state.devices = d.devices;
+    if(d.settings && +d.settings.warnDays) state.settings.warnDays = Math.max(1, +d.settings.warnDays);
+    if(Array.isArray(d.cats) && d.cats.length){
+      state.cats = d.cats.filter((c,i,a)=>typeof c==="string" && c && a.indexOf(c)===i);
+    }else{
+      state.cats = [...DEFAULT_CATS];
+    }
+    if(Array.isArray(d.logs)) state.logs = d.logs;
+    reconcileCats();
+  }catch(e){ console.warn("读取本地数据失败", e); }
+}
+/* 分类一致性：设备引用的分类必须存在于分类列表；「其他」兜底分类始终存在且排末尾 */
+function reconcileCats(){
+  state.devices.forEach(dev=>{ if(dev.cat && !state.cats.includes(dev.cat)) state.cats.push(dev.cat); });
+  if(!state.cats.includes("其他")) state.cats.push("其他");
+  keepOtherLast();
+}
+function keepOtherLast(){
+  const rest = state.cats.filter(c=>c!=="其他");
+  state.cats = [...rest, "其他"];
+}
+function save(){
+  localStorage.setItem(LS_KEY, JSON.stringify({ devices: state.devices, settings: state.settings, cats: state.cats, logs: state.logs }));
+}
+
+/* ===== 工具函数 ===== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function uid(){ return "d" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fmtDate(ts){
+  if(!ts) return "从未清点";
+  const d = new Date(ts);
+  const p = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function daysSince(ts){ return Math.floor((Date.now() - ts) / DAY); }
+function isOverdue(d){
+  const base = d.lastCheckedAt || d.createdAt;
+  return daysSince(base) > state.settings.warnDays;
+}
+
+/* ===== Toast ===== */
+let toastTimer;
+function toast(msg, warn){
+  const t = $("#toast"); $("#toastMsg").textContent = msg;
+  t.classList.toggle("warn", !!warn);
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("show"), 2600);
+}
+
+/* ===== 渲染：统计 + 标签 + 网格 ===== */
+function renderStats(){
+  const all = state.devices.length;
+  const done = state.devices.filter(d=>d.checked).length;
+  const pending = all - done;
+  const overdue = state.devices.filter(isOverdue).length;
+  $("#stTotal").textContent = all;
+  $("#stDone").textContent = done;
+  $("#stPending").textContent = pending;
+  $("#stOverdue").textContent = overdue;
+  $("#stOverdueNote").textContent = overdue ? `超过${state.settings.warnDays}天未清点` : "全部正常";
+  $("#cntPending").textContent = pending;
+  $("#cntDone").textContent = done;
+  $("#cntAll").textContent = all;
+}
+
+function filtered(){
+  const q = state.search.trim().toLowerCase();
+  return state.devices.filter(d=>{
+    if(state.view==="pending" && d.checked) return false;
+    if(state.view==="done" && !d.checked) return false;
+    if(state.cat && d.cat !== state.cat) return false;
+    if(q && !(d.name.toLowerCase().includes(q) || String(d.code).toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+function coverHTML(d){
+  if(d.image) return `<img src="${d.image}" alt="${esc(d.name)}">`;
+  const icon = CAT_ICONS[d.cat] || GENERIC_ICON;
+  return `<div class="ph"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${icon}</svg><span>${esc(d.cat||"未分类")}</span></div>`;
+}
+
+/* ===== 分类下拉 / 管理 ===== */
+function renderCatFilter(){
+  const sel = $("#catFilter");
+  if(!state.cats.includes(state.cat)) state.cat = "";
+  sel.innerHTML = `<option value="">全部分类</option>` + state.cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  sel.value = state.cat;
+}
+function renderCatOptions(){
+  $("#fCat").innerHTML = state.cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+}
+function renderCatManage(){
+  const box = $("#catManage");
+  box.innerHTML = state.cats.map((c,i)=>{
+    const count = state.devices.filter(d=>d.cat===c).length;
+    const isOther = c==="其他";
+    return `
+      <div class="cat-row">
+        <svg class="c-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg>
+        <input type="text" value="${esc(c)}" maxlength="12" data-idx="${i}" ${isOther?"disabled title=\"「其他」为兜底分类\"" : ""}>
+        <span class="count">${count} 件</span>
+        ${isOther
+          ? `<button class="icon-btn mini lock" disabled title="「其他」为兜底分类，不可删除"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>`
+          : `<button class="icon-btn mini save" data-idx="${i}" title="保存改名"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></button>
+             <button class="icon-btn mini del" data-idx="${i}" title="删除分类"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`}
+      </div>`;
+  }).join("");
+}
+
+/* 重命名分类：同步该分类下所有外设 */
+function renameCat(idx){
+  const input = document.querySelector(`#catManage input[data-idx="${idx}"]`);
+  if(!input) return;
+  const oldName = state.cats[idx];
+  const newName = input.value.trim();
+  if(!newName){ input.value = oldName; toast("分类名称不能为空", true); return; }
+  if(newName!==oldName && state.cats.includes(newName)){ input.value = oldName; toast("已存在同名分类", true); return; }
+  if(newName!==oldName){
+    state.cats[idx] = newName;
+    state.devices.forEach(d=>{ if(d.cat===oldName) d.cat = newName; });
+    if(state.cat===oldName) state.cat = newName;
+    save(); render(); renderCatManage();
+    toast(`分类「${oldName}」已改名为「${newName}」`);
+  }
+}
+
+/* 添加分类 */
+function addCat(){
+  const input = $("#newCatName");
+  const name = input.value.trim();
+  if(!name){ toast("请输入分类名称", true); return; }
+  if(state.cats.includes(name)){ toast("该分类已存在", true); return; }
+  state.cats.push(name);
+  keepOtherLast();
+  input.value = "";
+  save(); renderCatManage(); renderCatFilter();
+  toast(`已添加分类「${name}」`);
+}
+
+/* 删除分类：其下外设归入「其他」 */
+function askDeleteCat(idx){
+  const name = state.cats[idx];
+  if(name==="其他"){ toast("「其他」为兜底分类，不可删除", true); return; }
+  const n = state.devices.filter(d=>d.cat===name).length;
+  openConfirm(
+    `删除分类「${name}」？`,
+    n ? `该分类下 ${n} 件外设将自动归入「其他」。` : "该分类下暂无外设。",
+    ()=>{
+      state.cats.splice(idx,1);
+      state.devices.forEach(d=>{ if(d.cat===name) d.cat = "其他"; });
+      if(state.cat===name) state.cat = "";
+      save(); render(); renderCatManage();
+      toast(`已删除分类「${name}」`);
+    }
+  );
+}
+
+function renderGrid(){
+  const list = filtered();
+  const g = $("#grid");
+  if(!list.length){
+    const msg = state.view==="done" ? "还没有已清点的外设" : (state.view==="pending" ? "没有待清点的外设" : "清单为空");
+    g.innerHTML = `
+      <div class="empty">
+        <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15h10"/></svg>
+        <div class="t">${msg}</div>
+        <div class="s">${state.view==="all" ? "点击「添加外设」开始建立清点清单" : "完成清点后外设会自动移入已清点清单"}</div>
+        ${state.view==="all" ? '<button class="btn primary" onclick="openEditor()">添加外设</button>' : ""}
+      </div>`;
+    return;
+  }
+  g.innerHTML = list.map(d=>{
+    const od = isOverdue(d);
+    const chip = d.checked ? `<span class="chip done">已清点</span>` : `<span class="chip pending">待清点</span>`;
+    const meta = d.checked
+      ? `<div class="card-meta">${chip}<span>${fmtDate(d.lastCheckedAt)} 清点</span></div>`
+      : `<div class="card-meta">${chip}<span>${fmtDate(d.lastCheckedAt)}</span></div>`;
+    const ribbon = od ? `<div class="overdue-ribbon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 17h.01"/></svg>已 ${daysSince(d.lastCheckedAt||d.createdAt)} 天未清点 · 请优先检查</div>` : "";
+    const actions = d.checked
+      ? `<button class="btn ghost sm" onclick="toggleCheck('${d.id}')">撤销清点</button>`
+      : `<button class="btn primary sm" onclick="toggleCheck('${d.id}')">立即清点</button>`;
+    return `
+      <article class="card ${od?"overdue":""}">
+        ${ribbon}
+        <div class="card-cover">
+          ${coverHTML(d)}
+          <span class="cat-tag">${esc(d.cat)}</span>
+        </div>
+        <div class="card-body">
+          <div class="card-title"><span class="nm" title="${esc(d.name)}">${esc(d.name)}</span><span class="code">${esc(d.code)}</span></div>
+          ${d.note ? `<div class="card-note">${esc(d.note)}</div>` : ""}
+          ${meta}
+          <div class="card-actions">
+            ${actions}
+            <div class="spacer"></div>
+            <button class="icon-btn" title="编辑" onclick="openEditor('${d.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+            <button class="icon-btn del" title="删除" onclick="askDelete('${d.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+          </div>
+        </div>
+      </article>`;
+  }).join("");
+}
+
+function render(){ renderCatFilter(); renderStats(); renderGrid(); }
+
+/* ===== 清点日志记录 ===== */
+const MAX_LOGS = 30000;
+function pushLog(d){
+  state.logs.push({ id: uid(), deviceId: d.id, name: d.name, code: d.code, cat: d.cat, at: Date.now() });
+  if(state.logs.length > MAX_LOGS) state.logs.splice(0, state.logs.length - MAX_LOGS);
+}
+function popLastLog(deviceId){
+  for(let i=state.logs.length-1;i>=0;i--){
+    if(state.logs[i].deviceId===deviceId){ state.logs.splice(i,1); break; }
+  }
+}
+
+/* ===== 清点 / 撤销 ===== */
+function toggleCheck(id){
+  const d = state.devices.find(x=>x.id===id); if(!d) return;
+  if(!d.checked){
+    d.checked = true; d.lastCheckedAt = Date.now();
+    pushLog(d);
+    toast(`已清点「${d.name}」`);
+  }else{
+    d.checked = false;              /* 撤销：移除本次清点记录，并把上次清点时间回退到最近一次有效清点 */
+    popLastLog(d.id);
+    let last = 0;
+    state.logs.forEach(l=>{ if(l.deviceId===d.id && l.at>last) last = l.at; });
+    d.lastCheckedAt = last || null;
+    toast(`已撤销「${d.name}」的清点`, true);
+  }
+  save(); render();
+}
+
+function checkAll(){
+  const list = filtered().filter(d=>!d.checked);
+  if(!list.length){ toast("当前没有可清点的外设", true); return; }
+  const now = Date.now();
+  list.forEach(d=>{ d.checked = true; d.lastCheckedAt = now; pushLog(d); });
+  save(); render();
+  toast(`已清点 ${list.length} 件外设`);
+}
+
+/* ===== 一键重新清点（开始新一轮）===== */
+function resetCheck(){
+  openConfirm(
+    "重新清点？",
+    `将把全部 ${state.devices.length} 件外设重置为「未清点」，清空已清点清单，开始新一轮清点。清点记录将保留在日志中。`,
+    ()=>{
+      state.devices.forEach(d=>{ d.checked = false; });
+      save(); render();
+      toast("已开始新一轮清点");
+    }
+  );
+}
+
+/* ===== 清点日志 ===== */
+function fmtDateShort(ts){
+  const d = new Date(ts);
+  const p = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+function logRange(){
+  const t = new Date();
+  if(state.logMode==="today"){
+    const s = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+    return [s, s+DAY];
+  }
+  if(state.logMode==="yesterday"){
+    const s = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime() - DAY;
+    return [s, s+DAY];
+  }
+  if(state.logMode==="date" && state.logDate){
+    const [y,m,dd] = state.logDate.split("-").map(Number);
+    const s = new Date(y, m-1, dd).getTime();
+    return [s, s+DAY];
+  }
+  return null; /* 全部 */
+}
+function openLogs(){
+  if(!state.logDate) state.logDate = fmtDateShort(Date.now());
+  renderLogs();
+  openModal("#overlayLogs");
+}
+function renderLogs(){
+  document.querySelectorAll("#logTabs .log-tab").forEach(b=>{
+    b.classList.toggle("active", b.dataset.mode === state.logMode);
+  });
+  if(state.logMode==="date") $("#logDateInput").value = state.logDate;
+  const range = logRange();
+  let logs;
+  if(range){
+    logs = state.logs.filter(l=>l.at>=range[0] && l.at<range[1]).sort((a,b)=>b.at-a.at);
+  }else{
+    logs = [...state.logs].sort((a,b)=>b.at-a.at);
+  }
+  const doneSet = new Set(logs.map(l=>l.deviceId));
+  const doneN = doneSet.size;
+  const unN = state.devices.length - doneN;
+  const label = range ? (state.logMode==="today" ? "今日" : (state.logMode==="yesterday" ? "昨日" : fmtDateShort(range[0]))) : "全部时间";
+  $("#logStats").innerHTML = `
+    <div class="log-stat green"><div class="n">${doneN}</div><div class="l">${esc(label)} 已清点</div></div>
+    <div class="log-stat amber"><div class="n">${unN}</div><div class="l">${esc(label)} 未清点</div></div>
+    <div class="log-stat blue"><div class="n">${logs.length}</div><div class="l">清点记录</div></div>`;
+  const listEl = $("#logList");
+  if(!logs.length){
+    listEl.innerHTML = `<div class="log-empty">${range ? "该时间段内暂无清点记录" : "还没有清点记录，完成一次清点后会记录在这里"}</div>`;
+    return;
+  }
+  const itemHTML = l=>{
+    const d = new Date(l.at); const p = n=>String(n).padStart(2,"0");
+    return `<div class="log-item">
+      <span class="t">${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}</span>
+      <span class="nm" title="${esc(l.name)}">${esc(l.name)}</span>
+      <span class="code">${esc(l.code)}</span>
+      <span class="cat">${esc(l.cat||"未分类")}</span>
+    </div>`;
+  };
+  if(range){
+    listEl.innerHTML = logs.map(itemHTML).join("");
+  }else{
+    const groups = {};
+    logs.forEach(l=>{
+      const k = fmtDateShort(l.at);
+      (groups[k] = groups[k] || []).push(l);
+    });
+    listEl.innerHTML = Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(k=>
+      `<div class="log-group"><div class="log-group-h">${k} · ${groups[k].length} 条</div>${groups[k].map(itemHTML).join("")}</div>`
+    ).join("");
+  }
+}
+
+/* ===== 编辑弹窗 ===== */
+function openEditor(id){
+  state.editingId = id || null;
+  state.imgData = "";
+  const d = id ? state.devices.find(x=>x.id===id) : null;
+  $("#editorTitle").textContent = d ? "编辑外设" : "添加外设";
+  renderCatOptions();
+  $("#fName").value = d ? d.name : "";
+  $("#fCode").value = d ? d.code : "";
+  $("#fCat").value = d ? (state.cats.includes(d.cat) ? d.cat : "其他") : state.cats[0];
+  $("#fNote").value = d ? d.note : "";
+  $("#prevImg").src = d && d.image ? d.image : "";
+  $("#prevImg").style.display = d && d.image ? "block" : "none";
+  $("#prevDefault").style.display = d && d.image ? "none" : "block";
+  $("#prevRm").style.display = d && d.image ? "grid" : "none";
+  openModal("#overlayEditor");
+  setTimeout(()=>$("#fName").focus(), 60);
+}
+
+function saveEditor(){
+  const name = $("#fName").value.trim();
+  const code = $("#fCode").value.trim();
+  if(!name || !code){ toast("请填写名称和编号", true); return; }
+  if(state.editingId){
+    const d = state.devices.find(x=>x.id===state.editingId);
+    if(d){ d.name=name; d.code=code; d.cat=$("#fCat").value; d.note=$("#fNote").value.trim(); if(state.imgData) d.image=state.imgData; }
+    toast("已更新");
+  }else{
+    state.devices.unshift({ id: uid(), name, code, cat: $("#fCat").value, note: $("#fNote").value.trim(), image: state.imgData, checked:false, lastCheckedAt:null, createdAt: Date.now() });
+    toast("已添加");
+  }
+  save(); closeModal("#overlayEditor"); render();
+}
+
+/* ===== 删除外设 ===== */
+function openConfirm(title, desc, onOk){
+  state.confirm = { title, desc, onOk };
+  $("#confirmTitle").textContent = title;
+  $("#confirmDesc").textContent = desc;
+  openModal("#overlayConfirm");
+}
+function askDelete(id){
+  const d = state.devices.find(x=>x.id===id);
+  if(!d) return;
+  openConfirm("删除这条外设？", "删除后不可恢复，清点记录也会一并移除。", ()=>{
+    state.devices = state.devices.filter(x=>x.id!==id);
+    save(); render();
+    toast(`已删除「${d.name}」`);
+  });
+}
+function confirmOk(){
+  if(state.confirm && state.confirm.onOk) state.confirm.onOk();
+  state.confirm = null;
+  closeModal("#overlayConfirm");
+}
+
+/* ===== 图片上传（压缩转 base64）===== */
+$("#btnPickImg").addEventListener("click", ()=>$("#imgInput").click());
+$("#imgInput").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(!f) return;
+  if(!f.type.startsWith("image/")){ toast("请选择图片文件", true); return; }
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const max = 640;
+      let {width:w, height:h} = img;
+      if(w>max || h>max){ const r = Math.min(max/w, max/h); w=Math.round(w*r); h=Math.round(h*r); }
+      const c = document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      state.imgData = c.toDataURL("image/jpeg", .82);
+      $("#prevImg").src = state.imgData;
+      $("#prevImg").style.display="block";
+      $("#prevDefault").style.display="none";
+      $("#prevRm").style.display="grid";
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(f);
+  e.target.value="";
+});
+$("#prevRm").addEventListener("click", ()=>{
+  state.imgData="";
+  $("#prevImg").src=""; $("#prevImg").style.display="none";
+  $("#prevDefault").style.display="block"; $("#prevRm").style.display="none";
+});
+
+/* ===== 弹窗开关 ===== */
+function openModal(sel){ $(sel).classList.add("show"); }
+function closeModal(sel){ $(sel).classList.remove("show"); }
+document.querySelectorAll(".overlay").forEach(ov=>{
+  ov.addEventListener("click", e=>{ if(e.target===ov) ov.classList.remove("show"); });
+});
+document.querySelectorAll("[data-close]").forEach(b=>{
+  b.addEventListener("click", ()=>b.closest(".overlay").classList.remove("show"));
+});
+
+/* ===== 导出 / 导入 ===== */
+function download(name, content){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([content], {type:"application/json"}));
+  a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 300);
+}
+function doExport(){
+  download(`网咖外设清单备份_${new Date().toISOString().slice(0,10)}.json`, JSON.stringify({devices:state.devices, settings:state.settings, cats:state.cats, logs:state.logs}, null, 2));
+  toast("已导出备份文件");
+}
+$("#btnExport").addEventListener("click", doExport);
+$("#btnExport2").addEventListener("click", doExport);
+$("#btnImport").addEventListener("click", ()=>$("#importInput").click());
+$("#importInput").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const d = JSON.parse(reader.result);
+      if(!Array.isArray(d.devices)) throw 0;
+      if(!confirm(`导入将覆盖当前 ${state.devices.length} 条记录，是否继续？`)){ e.target.value=""; return; }
+      state.devices = d.devices;
+      if(d.settings && +d.settings.warnDays) state.settings.warnDays = Math.max(1, +d.settings.warnDays);
+      if(Array.isArray(d.cats) && d.cats.length){
+        state.cats = d.cats.filter((c,i,a)=>typeof c==="string" && c && a.indexOf(c)===i);
+      }else{
+        state.cats = [...DEFAULT_CATS];
+      }
+      reconcileCats();
+      if(Array.isArray(d.logs)) state.logs = d.logs; else state.logs = [];
+      $("#setWarnDays").value = state.settings.warnDays;
+      save(); render(); renderCatManage();
+      toast(`已导入 ${state.devices.length} 条外设`);
+    }catch(err){ toast("导入失败：文件格式不正确", true); }
+    e.target.value="";
+  };
+  reader.readAsText(f);
+});
+
+/* ===== 事件绑定 ===== */
+$("#btnAdd").addEventListener("click", ()=>openEditor());
+$("#btnSaveEditor").addEventListener("click", saveEditor);
+$("#btnConfirmDel").addEventListener("click", confirmOk);
+$("#btnCheckAll").addEventListener("click", checkAll);
+$("#btnReset").addEventListener("click", resetCheck);
+$("#btnLogs").addEventListener("click", openLogs);
+$("#logTabs").addEventListener("click", e=>{
+  const t = e.target.closest(".log-tab"); if(!t) return;
+  state.logMode = t.dataset.mode;
+  renderLogs();
+});
+$("#logDateInput").addEventListener("change", e=>{
+  state.logMode = "date";
+  state.logDate = e.target.value;
+  renderLogs();
+});
+$("#btnSettings").addEventListener("click", ()=>{ $("#setWarnDays").value = state.settings.warnDays; renderCatManage(); openModal("#overlaySettings"); });
+
+/* 分类管理交互（事件委托） */
+$("#btnAddCat").addEventListener("click", addCat);
+$("#newCatName").addEventListener("keydown", e=>{ if(e.key==="Enter"){ addCat(); e.preventDefault(); } });
+$("#catManage").addEventListener("click", e=>{
+  const saveBtn = e.target.closest(".save");
+  const delBtn = e.target.closest(".del");
+  if(saveBtn) renameCat(+saveBtn.dataset.idx);
+  if(delBtn) askDeleteCat(+delBtn.dataset.idx);
+});
+$("#catManage").addEventListener("keydown", e=>{
+  if(e.key==="Enter" && e.target.matches("input[data-idx]")){ renameCat(+e.target.dataset.idx); e.preventDefault(); }
+});
+
+$("#viewTabs").addEventListener("click", e=>{
+  const tab = e.target.closest(".view-tab"); if(!tab) return;
+  document.querySelectorAll(".view-tab").forEach(t=>t.classList.remove("active"));
+  tab.classList.add("active");
+  state.view = tab.dataset.view;
+  render();
+});
+$("#catFilter").addEventListener("change", e=>{ state.cat = e.target.value; render(); });
+$("#searchInput").addEventListener("input", e=>{ state.search = e.target.value; render(); });
+$("#setWarnDays").addEventListener("change", e=>{
+  let v = parseInt(e.target.value,10);
+  if(isNaN(v) || v<1) v=7; if(v>90) v=90;
+  e.target.value = v;
+  state.settings.warnDays = v;
+  save(); render();
+});
+
+/* ESC 关闭弹窗 */
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape") document.querySelectorAll(".overlay.show").forEach(o=>o.classList.remove("show"));
+});
+
+/* 存储变化跨标签同步 */
+window.addEventListener("storage", e=>{
+  if(e.key===LS_KEY){ load(); render(); }
+});
+
+/* ===== 启动：内置一组示例数据（首次使用时）===== */
+if(!localStorage.getItem(LS_KEY)){
+  const now = Date.now();
+  const d = now - 9*DAY;
+  state.devices = [
+    { id:uid(), name:"A区 1号机 键盘", code:"KB-A1", cat:"键盘", note:"空格键偶发连击，需留意", image:"", checked:false, lastCheckedAt: d, createdAt:d },
+    { id:uid(), name:"A区 1号机 鼠标", code:"MS-A1", cat:"鼠标", note:"", image:"", checked:true, lastCheckedAt: now-3*DAY, createdAt:d },
+    { id:uid(), name:"A区 1号机 耳机", code:"HP-A1", cat:"耳机", note:"右耳音量偏小", image:"", checked:false, lastCheckedAt: now-10*DAY, createdAt:d },
+    { id:uid(), name:"B区 2号机 键盘", code:"KB-B2", cat:"键盘", note:"", image:"", checked:true, lastCheckedAt: now-2*DAY, createdAt:d },
+    { id:uid(), name:"B区 2号机 手柄", code:"GP-B2", cat:"手柄", note:"摇杆回弹正常", image:"", checked:false, lastCheckedAt: now-6*DAY, createdAt:d }
+  ];
+  state.logs = state.devices.filter(x=>x.checked).map(x=>({ id:uid(), deviceId:x.id, name:x.name, code:x.code, cat:x.cat, at:x.lastCheckedAt }));
+  save();
+}
+load();
+render();
+</script>
+</body>
+</html>
